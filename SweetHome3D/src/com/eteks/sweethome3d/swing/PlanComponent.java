@@ -2008,8 +2008,44 @@ public class PlanComponent extends JComponent implements PlanView, Scrollable, P
    * that makes it fill <code>pageFormat</code> imageable size if this attribute is <code>null</code>.
    */
   public int print(Graphics g, PageFormat pageFormat, int pageIndex) {
-    List<Selectable> printedItems = getPaintedItems(); 
+    if (this.home.getLevels().isEmpty()) {
+      return printLevel(g, pageFormat, pageIndex);
+    }
+
+    List<Level> viewableLevels = new ArrayList<Level>();
+
+    for (Level level : this.home.getLevels()) {
+      if (level.isViewable()) {
+        viewableLevels.add(level);
+      }
+    }
+    if (pageIndex < 0 || pageIndex >= viewableLevels.size()) {
+      return NO_SUCH_PAGE;
+    }
+
+    Level originalLevel = this.home.getSelectedLevel();
+
+    try {
+      this.home.setSelectedLevel(viewableLevels.get(pageIndex));
+      return printLevel(g, pageFormat, 0);
+    } finally {
+      this.home.setSelectedLevel(originalLevel);
+    }
+  }
+  private int printLevel(Graphics g, PageFormat pageFormat, int pageIndex) {
+    List<Selectable> printedItems = new ArrayList<Selectable>();
+    Level selectedLevel = this.home.getSelectedLevel();
+
+    for (Selectable item : getPaintedItems()) {
+      if (!(item instanceof Elevatable)
+              || ((Elevatable)item).getLevel() == null
+              || ((Elevatable)item).isAtLevel(selectedLevel)) {
+        printedItems.add(item);
+      }
+    }
+
     Rectangle2D printedItemBounds = getItemsBounds(g, printedItems);
+
     if (printedItemBounds != null) {
       double imageableX = pageFormat.getImageableX();
       double imageableY = pageFormat.getImageableY();
